@@ -72,6 +72,10 @@ def setup_env():
         from dev_appserver import fix_sys_path
         fix_sys_path()
 
+    libraries_dir = os.path.join(PROJECT_DIR, "libraries")
+    if libraries_dir not in sys.path:
+        sys.path.insert(1, libraries_dir) #POTATO HACK
+
     setup_project()
     from .utils import have_appserver
     if have_appserver:
@@ -165,7 +169,7 @@ def setup_project():
             # Allow importing compiler/parser, _ssl (for https),
             # _io for Python 2.7 io support on OS X
             dev_appserver.HardenedModulesHook._WHITE_LIST_C_MODULES.extend(
-                ('parser', '_ssl', '_io'))
+                ('parser', '_ssl', '_io', '_sqlite3'))
         except AttributeError:
             logging.warn("Could not patch modules whitelist. the compiler "
                          "and parser modules will not work and SSL support "
