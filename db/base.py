@@ -3,6 +3,7 @@ import decimal
 import logging
 import os
 import shutil
+import warnings
 
 from django.db.utils import DatabaseError
 
@@ -154,6 +155,11 @@ class DatabaseOperations(NonrelDatabaseOperations):
         # other relations).
         if db_type == 'key':
 #            value = self._value_for_db_key(value, field_kind)
+            if isinstance(value, str) and len(value) > 500:
+                warnings.warn(u"GAE string key '%s' exceeded maximum_length of 500 and was truncated." % value,
+                              RuntimeWarning)
+                value = value[:500]
+
             try:
                 value = key_from_path(field.model._meta.db_table, value)
             except (BadArgumentError, BadValueError,):
