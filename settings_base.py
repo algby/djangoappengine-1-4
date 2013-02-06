@@ -21,7 +21,7 @@ DATABASES = {
         # settings.py.
 
         # Activates high-replication support for remote_api.
-        # 'HIGH_REPLICATION': True,
+        'HIGH_REPLICATION': True,
 
         # Switch to the App Engine for Business domain.
         # 'DOMAIN': 'googleplex.com',
@@ -36,14 +36,14 @@ DATABASES = {
 
             # Emulate the high-replication datastore locally.
             # TODO: Likely to break loaddata (some records missing).
-            # 'high_replication' : True,
+            'high_replication' : True,
 
             # Use the SQLite backend for local storage (instead of
             # default in-memory datastore). Useful for testing with
             # larger datasets or when debugging concurrency/async
             # issues (separate processes will share a common db state,
             # rather than syncing on startup).
-            # 'use_sqlite': True,
+            'use_sqlite': True,
         },
     },
 }
