@@ -58,10 +58,7 @@ from djangoappengine.utils import on_production_server
 if not on_production_server:
     validate_models()
 
-from django.core.handlers.wsgi import WSGIHandler
-from google.appengine.ext.webapp.util import run_wsgi_app
 from django.conf import settings
-
 
 def log_traceback(*args, **kwargs):
     import logging
@@ -70,9 +67,9 @@ def log_traceback(*args, **kwargs):
 from django.core import signals
 signals.got_request_exception.connect(log_traceback)
 
-
-# Create a Django application for WSGI.
-application = WSGIHandler()
+# Create a Django application for WSGI.using the WSGI_APPLICATION setting
+module = __import__(".".join(settings.WSGI_APPLICATION.split(".")[:-1]), fromlist=[ settings.WSGI_APPLICATION.split(".")[-1] ])
+application = getattr(module, settings.WSGI_APPLICATION.split(".")[-1])
 
 # Add the staticfiles handler if necessary.
 if settings.DEBUG and 'django.contrib.staticfiles' in settings.INSTALLED_APPS:
