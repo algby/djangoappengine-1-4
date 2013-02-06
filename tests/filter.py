@@ -1,3 +1,5 @@
+from django.test.utils import override_settings
+
 import datetime
 import time
 
@@ -483,3 +485,5 @@ class FilterTest(TestCase):
         self.assertEqual(e['data'], x.data)
         x = BlobModel.objects.all()[0]
         self.assertEqual(e['data'], x.data)
+
+FilterTest = override_settings(USE_TZ=False)(FilterTest)

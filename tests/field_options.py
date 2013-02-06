@@ -2,6 +2,7 @@ import datetime
 
 from django.test import TestCase
 from django.db.utils import DatabaseError
+from django.test.utils import override_settings
 from django.db.models.fields import NOT_PROVIDED
 
 from google.appengine.api import users
@@ -107,3 +108,5 @@ class FieldOptionsTest(TestCase):
 
         db_entity = NullableTextModel.objects.get()
         self.assertEquals(db_entity.text, None)
+
+FieldOptionsTest = override_settings(USE_TZ=False)(FieldOptionsTest)

@@ -1,6 +1,7 @@
 import datetime
 
 from django.test import TestCase
+from django.test.utils import override_settings
 
 from google.appengine.api.datastore import Get
 from google.appengine.api.datastore_types import Text, Category, Email, \
@@ -70,3 +71,5 @@ class FieldDBConversionTest(TestCase):
             if not isinstance(types, (list, tuple)):
                 types = (types, )
             self.assertTrue(type(getattr(model, name)) in types)
+
+FieldDBConversionTest = override_settings(USE_TZ=False)(FieldDBConversionTest)
