@@ -67,9 +67,8 @@ def log_traceback(*args, **kwargs):
 from django.core import signals
 signals.got_request_exception.connect(log_traceback)
 
-# Create a Django application for WSGI.using the WSGI_APPLICATION setting
-module = __import__(".".join(settings.WSGI_APPLICATION.split(".")[:-1]), fromlist=[ settings.WSGI_APPLICATION.split(".")[-1] ])
-application = getattr(module, settings.WSGI_APPLICATION.split(".")[-1])
+from django.core.wsgi import get_wsgi_application
+application = get_wsgi_application()
 
 # Add the staticfiles handler if necessary.
 if settings.DEBUG and 'django.contrib.staticfiles' in settings.INSTALLED_APPS:
