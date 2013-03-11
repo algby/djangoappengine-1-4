@@ -69,7 +69,7 @@ def setup_env():
         sys.path = [ sdk_path ] + sys.path
 
         # Then call fix_sys_path from the SDK
-        from api_server import fix_sys_path, DIR_PATH
+        from dev_appserver import fix_sys_path, DIR_PATH
         fix_sys_path()
 
         # Fix updated third-party libraries
