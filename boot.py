@@ -71,8 +71,12 @@ def setup_env():
         sys.path = [ sdk_path, DJANGOAPPENGINE_LIB_PATH ] + sys.path
 
         # Then call fix_sys_path from the SDK
-        from dev_appserver import fix_sys_path
+        from dev_appserver import fix_sys_path, DIR_PATH
         fix_sys_path()
+
+        # Fix updated third-party libraries
+        webob_path = os.path.join(DIR_PATH, 'lib', 'webob-1.2.3')
+        sys.path = [webob_path] + sys.path
 
     libraries_dir = os.path.join(PROJECT_DIR, "libraries")
     if libraries_dir not in sys.path:
