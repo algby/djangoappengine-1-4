@@ -299,7 +299,7 @@ class DatabaseWrapper(NonrelDatabaseWrapper):
         self.validation = DatabaseValidation(self)
         self.introspection = DatabaseIntrospection(self)
         options = self.settings_dict
-        self.remote_app_id = options.get('REMOTE_APP_ID', appid)
+        self.remote_app_id = options.get('REMOTE_APP_ID', appid())
         self.domain = options.get('DOMAIN', 'appspot.com')
         self.remote_api_path = options.get('REMOTE_API_PATH', None)
         self.secure_remote_api = options.get('SECURE_REMOTE_API', True)
