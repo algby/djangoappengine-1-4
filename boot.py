@@ -65,8 +65,10 @@ def setup_env():
                              "environment and called google_appengine.\n")
             sys.exit(1)
 
+        DJANGOAPPENGINE_LIB_PATH = os.path.join(os.path.abspath(os.path.dirname(__file__)), "lib")
+
         # First add the found SDK to the path
-        sys.path = [ sdk_path ] + sys.path
+        sys.path = [ sdk_path, DJANGOAPPENGINE_LIB_PATH ] + sys.path
 
         # Then call fix_sys_path from the SDK
         from dev_appserver import fix_sys_path
@@ -174,14 +176,6 @@ def setup_project():
             logging.warn("Could not patch modules whitelist. the compiler "
                          "and parser modules will not work and SSL support "
                          "is disabled.")
-
-        # In SDK 1.6.4, the datastore doesn't save automatically on exit.
-        # Register a handler to make sure we save.  This is important on
-        # manage.py commands other than 'runserver'.  Note that with runserver,
-        # the datastore is flushed twice.  This should be acceptable.
-        import atexit
-        if hasattr(dev_appserver, 'TearDownStubs'):
-            atexit.register(dev_appserver.TearDownStubs)
 
     elif not on_production_server:
         try:
