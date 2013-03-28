@@ -177,6 +177,16 @@ def setup_project():
                          "and parser modules will not work and SSL support "
                          "is disabled.")
 
+    # In the last SDK versions the datastore doesn't save automatically on exit.
+    # Register a handler to make sure we save.  This is important on
+    # manage.py commands other than 'runserver'.  Note that with runserver,
+    # the datastore is flushed twice.  This should be acceptable.
+    # This might not be necessary anymore at some point in the future,
+    # but as of 1.7.6 it still is.
+    import atexit
+    if hasattr(dev_appserver, 'TearDownStubs'):
+        atexit.register(dev_appserver.TearDownStubs)
+
     elif not on_production_server:
         try:
             # Restore the real subprocess module.
