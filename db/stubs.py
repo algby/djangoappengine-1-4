@@ -94,7 +94,7 @@ class StubManager(object):
                 if handler.script in REMOTE_API_SCRIPTS:
                     connection.remote_api_path = handler.url.split('(', 1)[0]
                     break
-        server = '%s.%s' % (connection.remote_app_id, connection.domain)
+        server = '%s.%s' % (connection.remote_app_id.split(":")[-1], connection.domain)
         remote_url = 'https://%s%s' % (server, connection.remote_api_path)
         logging.info("Setting up remote_api for '%s' at %s." %
                      (connection.remote_app_id, remote_url))
