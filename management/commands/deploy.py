@@ -67,7 +67,10 @@ class Command(BaseCommand):
 
     def run_from_argv(self, argv):
         for command in PRE_DEPLOY_COMMANDS:
-            call_command(command)
+            if isinstance(command, (list, tuple)):
+                call_command(command[0], *command[1], **command[2])
+            else:
+                call_command(command)
         try:
             run_appcfg(argv)
         finally:
