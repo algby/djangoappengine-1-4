@@ -1,6 +1,7 @@
 import logging
 import time
 import sys
+import os
 
 from django.conf import settings
 from django.core.management import call_command
@@ -8,7 +9,7 @@ from django.core.management.base import BaseCommand
 
 from ...boot import PROJECT_DIR
 from ...utils import appconfig
-
+from subprocess import check_output
 
 PRE_DEPLOY_COMMANDS = ()
 if 'mediagenerator' in settings.INSTALLED_APPS:
@@ -68,7 +69,11 @@ class Command(BaseCommand):
     def run_from_argv(self, argv):
         for command in PRE_DEPLOY_COMMANDS:
             if isinstance(command, (list, tuple)):
-                call_command(command[0], *command[1], **command[2])
+                #If this is a path to a binary, then run that with the arguments
+                if os.path.exists(command[0]):
+                    print check_output(command)
+                else:
+                    call_command(command[0], *command[1], **command[2])
             else:
                 call_command(command)
         try:
