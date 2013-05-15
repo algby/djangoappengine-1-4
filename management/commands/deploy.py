@@ -39,6 +39,9 @@ def run_appcfg(argv):
         new_args.remove('--nosyncdb')
     appcfg.main(new_args)
 
+    from ...db.base import DatabaseWrapper
+    from ...db.stubs import stub_manager
+
     if syncdb:
         print "Running syncdb."
         # Wait a little bit for deployment to finish.
@@ -46,9 +49,10 @@ def run_appcfg(argv):
             sys.stdout.write('%s\r' % countdown)
             time.sleep(1)
         from django.db import connections
+
         for connection in connections.all():
-            if hasattr(connection, 'setup_remote'):
-                connection.setup_remote()
+            if isinstance(connection, DatabaseWrapper):
+                stub_manager.setup_remote_stubs(connection)
         call_command('syncdb', remote=True, interactive=True)
 
     if getattr(settings, 'ENABLE_PROFILER', False):
