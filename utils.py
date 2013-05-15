@@ -20,5 +20,4 @@ def appid():
             raise Exception("Could not get appid. Is your app.yaml file missing? "
                             "Error was: %s" % e)
 
-on_production_server = have_appserver and \
-    not os.environ.get('SERVER_SOFTWARE', '').lower().startswith('devel')
+on_production_server = 'SERVER_SOFTWARE' in os.environ and not os.environ['SERVER_SOFTWARE'].startswith("Development")
