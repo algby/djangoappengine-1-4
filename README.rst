@@ -19,3 +19,24 @@ to send regular patches to the mailing list.
 :Bug tracker: https://github.com/django-nonrel/djangoappengine/issues
 :License: 3-clause BSD, see LICENSE
 :Keywords: django, app engine, orm, nosql, database, python
+
+#Setting up your WSGI handler
+
+Djangoappengine now uses WSGI middleware to workaround some issues in AppEngine's
+environment variable handling when threadsafe is true, and also to clean up the code.
+
+These changes break compatibilty with Python 2.5 so if you need that, either use the
+official djangoappengine, or use an older revision.
+
+Your wsgi.py should now look something like this:
+
+    import os
+
+    os.environ.setdefault("DJANGO_SETTINGS_MODULE", "myapp.settings")
+
+    from djangoappengine.main import DjangoAppEngineMiddleware
+    from django.core.wsgi import get_wsgi_application
+
+    application = DjangoAppEngineMiddleware(get_wsgi_application())
+
+And the magic should just work!

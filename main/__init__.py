@@ -1,5 +1,5 @@
-from djangoappengine.boot import setup_env
-setup_env()
+import logging
+import os
 
 def validate_models():
     """
@@ -7,7 +7,6 @@ def validate_models():
     model valdidation here to ensure it is run every time the code
     changes.
     """
-    import logging
     from django.core.management.validation import get_validation_errors
     try:
         from cStringIO import StringIO
@@ -31,19 +30,30 @@ from djangoappengine.utils import on_production_server
 if not on_production_server:
     validate_models()
 
-from django.core.wsgi import get_wsgi_application
-application = get_wsgi_application()
-
 from django.conf import settings
 
-## In vanilla Django, staticfiles overrides runserver to use StaticFilesHandler
-## if necessary. As we can't do this in our runserver (because we handover to dev_appserver)
-## this has to be done here
-if (not on_production_server and settings.DEBUG) and 'django.contrib.staticfiles' in settings.INSTALLED_APPS:
-    from django.contrib.staticfiles.handlers import StaticFilesHandler
-    application = StaticFilesHandler(application)
+class DjangoAppEngineMiddleware:
+    def __init__(self, app):
+        self.settings_module = os.environ['DJANGO_SETTINGS_MODULE']
 
-if getattr(settings, 'ENABLE_APPSTATS', False):
-    from google.appengine.ext.appstats.recording import \
-        appstats_wsgi_middleware
-    application = appstats_wsgi_middleware(application)
+        from djangoappengine.boot import setup_env
+        setup_env()
+
+        ## In vanilla Django, staticfiles overrides runserver to use StaticFilesHandler
+        ## if necessary. As we can't do this in our runserver (because we handover to dev_appserver)
+        ## this has to be done here
+        if (not on_production_server and settings.DEBUG) and 'django.contrib.staticfiles' in settings.INSTALLED_APPS:
+            from django.contrib.staticfiles.handlers import StaticFilesHandler
+            app = StaticFilesHandler(app)
+
+        if getattr(settings, 'ENABLE_APPSTATS', False):
+            from google.appengine.ext.appstats.recording import \
+                appstats_wsgi_middleware
+            app = appstats_wsgi_middleware(app)
+
+        self.wrapped_app = app
+
+    def __call__(self, environ, start_response):
+        #Always make sure the settings module is set - AppEngine sometimes loses it!
+        os.environ['DJANGO_SETTINGS_MODULE'] = self.settings_module
+        return self.wrapped_app(environ, start_response)
