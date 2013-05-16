@@ -12,7 +12,6 @@ from google.appengine.tools import dev_appserver_main
 from ...boot import PROJECT_DIR
 from ...db.base import DatabaseWrapper, get_datastore_paths
 
-
 class Command(BaseRunserverCommand):
     """
     Overrides the default Django runserver command.

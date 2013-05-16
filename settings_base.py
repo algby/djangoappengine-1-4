@@ -76,3 +76,42 @@ SESSION_ENGINE = 'django.contrib.sessions.backends.cached_db'
 
 if not on_production_server:
     INTERNAL_IPS = ('127.0.0.1',)
+
+#def log_traceback(*args, **kwargs):
+#    import logging
+#    logging.exception("Exception in request:")
+
+#if not on_production_server:
+#    from django.core import signals
+#    signals.got_request_exception.connect(log_traceback)
+
+
+LOGGING = {
+    'version': 1,
+    'disable_existing_loggers': False,
+    'filters': {
+        'require_debug_false': {
+            '()': 'django.utils.log.RequireDebugFalse'
+        }
+    },
+    'handlers': {
+        'mail_admins': {
+            'level': 'ERROR',
+            'filters': ['require_debug_false'],
+            'class': 'django.utils.log.AdminEmailHandler'
+        }
+    },
+    'loggers': {
+        'django.request': {
+            'handlers': ['mail_admins'],
+            'level': 'ERROR',
+            'propagate': True,
+        },
+    }
+}
+
+if not on_production_server:
+    LOGGING['handlers']['console'] = {
+        'level': 'ERROR',
+        'class': 'logging.StreamHandler'
+    }
