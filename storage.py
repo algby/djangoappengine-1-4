@@ -99,7 +99,10 @@ class BlobstoreStorage(Storage):
 
     def url(self, name):
         try:
-            return get_serving_url(self._get_blobinfo(name))
+            #return a protocol-less URL, because django can't/won't pass
+            #down an argument saying whether it should be secure or not
+            url = get_serving_url(self._get_blobinfo(name))
+            return re.sub("http://", "//", url)
         except NotImageError:
             return None
 
