@@ -40,3 +40,31 @@ Your wsgi.py should now look something like this:
     application = DjangoAppEngineMiddleware(get_wsgi_application())
 
 And the magic should just work!
+
+# Ancestor Queries
+
+Ancestor queries are very datastore specific, but this fork of Djangoappengine includes
+basic support for them. To use ancestor queries you must do the following:
+
+1. Replace your "id" field of your child model with a djangoappengine.fields.GAEKeyField. e.g.
+
+    id = GAEKeyField(ancestor_model=AncestorModel)
+
+2. Make your child model use the PossibleDescendent Mixin, e.g.
+
+    class ChildModel(PossibleDescendent, models.Model):
+        id = GAEKeyField(ancestor_model=AncestorModel)
+
+Now, you can do the following:
+
+    parent = AncestorModel.objects.create()
+    child = ChildModel.objects.create(id=AncestorKey(parent))
+
+    child.parent() == parent
+
+    children = ChildModel.descendents_of(parent).all()
+
+You can continue to use child and ancestor models as normal if you want:
+
+    child = ChildModel.objects.create()
+    child.parent() -> None
