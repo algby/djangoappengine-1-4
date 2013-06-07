@@ -2,8 +2,26 @@ from django.db.models import AutoField, SubfieldBase
 
 from google.appengine.api.datastore import Key
 from google.appengine.ext import db
+from django.db.models.sql.where import Constraint
+
+class AncestorNode(Constraint):
+    def __init__(self, instance):
+        self.instance = instance
 
 class PossibleDescendent(object):
+    @classmethod
+    def descendents_of(cls, instance):
+        qs = cls.objects.all()
+
+        #Add our own custom constraint type to mark this as an ancestor query
+        #this is used in GAEQuery._decode_child and then switched for a custom filter
+        #which is passed to GAEQuery.add_filter where we set the ancestor_key
+        qs.query.where.add(
+            (Constraint(None, '__ancestor', instance._meta.pk), 'exact', instance),
+            'AND'
+        )
+        return qs
+
     def parent(self):
         if isinstance(self._meta.pk, GAEKeyField):
             return self._meta.pk.ancestor_model.objects.get(pk=self._meta.pk._parent_key.id_or_name())

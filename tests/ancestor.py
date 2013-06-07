@@ -35,4 +35,8 @@ class AncestorQueryTest(TestCase):
         child_count = ChildModel.descendents_of(parent).filter(field1="apples").count()
         self.assertEqual(1, child_count)
 
+        #Create another child
+        ChildModel.objects.create(id=AncestorKey(parent))
 
+        child_count = ChildModel.descendents_of(parent).filter(field1="apples").count()
+        self.assertEqual(2, child_count)

@@ -84,6 +84,7 @@ class GAEQuery(NonrelQuery):
         super(GAEQuery, self).__init__(compiler, fields)
         self.inequality_field = None
         self.included_pks = None
+        self.ancestor_key = None
         self.excluded_pks = ()
         self.has_negated_exact_filter = False
         self.ordering = []
@@ -172,6 +173,14 @@ class GAEQuery(NonrelQuery):
                 direction = Query.ASCENDING if ascending else Query.DESCENDING
                 self.ordering.append((column, direction))
 
+    def _decode_child(self, child):
+        #HACKY: If this is an ancestor lookup, then just special case
+        #to return the ID, a special ancestor lookup, and the ancestor instance
+        constraint, lookup_type, annotation, value = child
+        if constraint.col == '__ancestor':
+            return ('id', 'ancestor', value)
+
+        return super(GAEQuery, self)._decode_child(child)
 
     @safe_call
     def add_filter(self, field, lookup_type, negated, value):
@@ -179,6 +188,10 @@ class GAEQuery(NonrelQuery):
         This function is used by the default add_filters()
         implementation.
         """
+        if lookup_type == 'ancestor':
+            self.ancestor_key = Key.from_path(value._meta.db_table, value.pk)
+            return
+
         if lookup_type not in OPERATORS_MAP:
             raise DatabaseError("Lookup type %r isn't supported." %
                                 lookup_type)
@@ -313,6 +326,11 @@ class GAEQuery(NonrelQuery):
     def _build_query(self):
         for query in self.gae_query:
             query.Order(*self.ordering)
+
+            #This is an ancestor query
+            if self.ancestor_key:
+                query.Ancestor(self.ancestor_key)
+
         if len(self.gae_query) > 1:
             return MultiQuery(self.gae_query, self.ordering)
         return self.gae_query[0]
