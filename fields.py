@@ -1,4 +1,4 @@
-from django.db.models import AutoField, SubfieldBase
+from django.db.models import AutoField
 
 from google.appengine.api.datastore import Key
 from google.appengine.ext import db
@@ -9,6 +9,10 @@ class AncestorNode(Constraint):
         self.instance = instance
 
 class PossibleDescendent(object):
+    def __init__(self, *args, **kwargs):
+        self._parent_key = None
+        super(PossibleDescendent, self).__init__(*args, **kwargs)
+
     @classmethod
     def descendents_of(cls, instance):
         qs = cls.objects.all()
@@ -23,19 +27,24 @@ class PossibleDescendent(object):
         return qs
 
     def parent(self):
-        if isinstance(self._meta.pk, GAEKeyField):
-            return self._meta.pk.ancestor_model.objects.get(pk=self._meta.pk._parent_key.id_or_name())
-        return None
+        return self.pk.ancestor if isinstance(self.pk, AncestorKey) else None
 
 class AncestorKey(object):
     def __init__(self, ancestor, key_id=None):
         self.ancestor = ancestor
-        self.key_id = key_id
+
+        parent_key = Key.from_path(ancestor._meta.db_table, ancestor.pk)
+        self.key_id = key_id or db.allocate_ids(
+            parent_key,
+            1
+        )[0]
+
+    def __eq__(self, other):
+        return self.ancestor == other.ancestor and self.key_id == other.key_id
+
 
 class GAEKeyField(AutoField):
     #Make sure to_python is called on assignments
-    __metaclass__ = SubfieldBase
-
     def __init__(self, ancestor_model, *args, **kwargs):
         self.ancestor_model = ancestor_model
         self._parent_key = None
@@ -44,37 +53,21 @@ class GAEKeyField(AutoField):
         kwargs["primary_key"] = True
         super(GAEKeyField, self).__init__(*args, **kwargs)
 
-    def get_db_prep_value(self, value, connection, prepared=False):
-        if self._parent_key:
-            return Key.from_path(self.model._meta.db_table, value or self._id, parent=self._parent_key)
-
-        return super(GAEKeyField, self).get_db_prep_value(value, connection, prepared)
-
     def to_python(self, value):
-        #FIXME: throw exception if connection != datastore
-        if value and isinstance(value, AncestorKey):
-            if value.ancestor.__class__ != self.ancestor_model:
-                raise ValueError("Tried to set ancestor of incorrect type")
+        if isinstance(value, Key):
+            return AncestorKey(
+                ancestor=self.ancestor_model.objects.get(pk=value.parent().id_or_name()),
+                key_id=value.id_or_name()
+            )
+        return value
 
-            #Get the parent key
-            self._parent_key = Key.from_path(
-                self.ancestor_model._meta.db_table,
-                value.ancestor.pk
+    def get_db_prep_value(self, value, connection, prepared=False):
+        if isinstance(value, AncestorKey):
+            parent_key = Key.from_path(self.ancestor_model._meta.db_table, value.ancestor.pk)
+            return Key.from_path(
+                self.model._meta.db_table,
+                value.key_id,
+                parent=parent_key
             )
 
-            #If no ID value was specified
-            if not value.key_id:
-                #Generate a key and store it on the field
-                self._id = db.allocate_ids(
-                    self._parent_key,
-                    1
-                )[0]
-                return None
-            else:
-                self._id = value.key_id
-
-            #Return the generated ID
-            return value.key_id
-        else:
-            return super(GAEKeyField, self).to_python(value)
-
+        return super(GAEKeyField, self).get_db_prep_value(value, connection)

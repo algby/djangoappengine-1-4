@@ -17,11 +17,10 @@ class AncestorQueryTest(TestCase):
         parent = AncestorModel.objects.create()
         ChildModel.objects.create(id=1)
 
-        child = ChildModel.objects.create(id=AncestorKey(parent, 2))
+        child = ChildModel.objects.create(id=AncestorKey(parent))
 
         self.assertTrue(child.pk) #Should be populated
-        self.assertTrue(isinstance(child.pk, (int, long)))
-        self.assertEqual(2, child.pk) #Should be the ID we passed in
+        self.assertTrue(isinstance(child.pk, AncestorKey))
 
         self.assertTrue(child.parent())
         self.assertEqual(parent, child.parent())
@@ -30,7 +29,7 @@ class AncestorQueryTest(TestCase):
         self.assertEqual(1, child_count)
 
         #Don't set a parent
-        ChildModel.objects.create()
+        non_child = ChildModel.objects.create()
 
         #Should still be the same!
         child_count = ChildModel.descendents_of(parent).filter(field1="apples").count()
@@ -46,11 +45,21 @@ class AncestorQueryTest(TestCase):
         pk = child.pk
         child = ChildModel.objects.get(pk=pk)
         self.assertEqual(pk, child.pk)
+        self.assertTrue(child.parent())
 
         pk = child2.pk
         child2 = ChildModel.objects.get(pk=pk)
         self.assertEqual(pk, child2.pk)
+        self.assertTrue(child2.parent())
+
+        pk = non_child.pk
+        non_child = ChildModel.objects.get(pk=pk)
+        self.assertEqual(pk, non_child.pk)
+        self.assertIsNone(non_child.parent())
 
         #Check all children are returned without the ancestor query
         child_count = ChildModel.objects.filter(field1="apples").count()
-        self.assertEqual(3, child_count)
+        self.assertEqual(4, child_count)
+
+        child_count = ChildModel.descendents_of(parent).filter(field1="apples").count()
+        self.assertEqual(2, child_count)
