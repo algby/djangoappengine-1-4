@@ -205,7 +205,8 @@ class DatabaseOperations(NonrelDatabaseOperations):
             if value.parent():
                 from djangoappengine.fields import AncestorKey
                 value = AncestorKey(
-                    ancestor=field.ancestor_model.objects.get(pk=value.parent().id_or_name()),
+                    ancestor_model=field.ancestor_model,
+                    ancestor_pk=value.parent().id_or_name(),
                     key_id=value.id_or_name()
                 )
             else:

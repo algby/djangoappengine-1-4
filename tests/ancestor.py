@@ -14,9 +14,16 @@ class ChildModel(PossibleDescendent, models.Model):
 
 class AncestorQueryTest(TestCase):
     def test_gae_key_field(self):
-        parent = AncestorModel.objects.create()
-        ChildModel.objects.create(id=1)
+        parent = AncestorModel()
+        try:
+            AncestorKey(parent)
+        except AssertionError:
+            pass
+        else:
+            self.fail("Allowing saving unspecified parents!")
 
+        parent.save()
+        ChildModel.objects.create(id=1)
         child = ChildModel.objects.create(id=AncestorKey(parent))
 
         self.assertTrue(child.pk) #Should be populated
