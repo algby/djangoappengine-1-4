@@ -203,9 +203,13 @@ class DatabaseOperations(NonrelDatabaseOperations):
                 "dumping data, changing to new storage and reloading."
             #assert value.parent() is None, "Parents are not yet supported!"
             if value.parent():
-                field._parent_key = value.parent()
-            value = value.id_or_name()
-#            value = self._value_from_db_key(value, field_kind)
+                from djangoappengine.fields import AncestorKey
+                value = AncestorKey(
+                    ancestor=field.ancestor_model.objects.get(pk=value.parent().id_or_name()),
+                    key_id=value.id_or_name()
+                )
+            else:
+                value = value.id_or_name()
 
         # Always retrieve strings as unicode (old datasets may
         # contain non-unicode strings).

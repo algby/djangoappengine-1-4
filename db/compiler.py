@@ -376,46 +376,6 @@ class SQLCompiler(NonrelCompiler):
 
 class SQLInsertCompiler(NonrelInsertCompiler, SQLCompiler):
 
-    def execute_sql(self, return_id=False):
-        """Basically the same as the NonrelCompiler, but, we handle
-           AncestorKey here
-        """
-
-        to_insert = []
-        pk_field = self.query.get_meta().pk
-
-        from djangoappengine.fields import GAEKeyField
-
-        if isinstance(pk_field, GAEKeyField) and pk_field._parent_key \
-           and pk_field not in self.query.fields:
-            #If we have a parent_key set, then add this to the insert query
-
-            self.query.fields.insert(0, pk_field)
-            return_id = True
-
-        for obj in self.query.objs:
-            field_values = {}
-            for field in self.query.fields:
-                value = field.get_db_prep_save(
-                    getattr(obj, field.attname) if self.query.raw else field.pre_save(obj, obj._state.adding),
-                    connection=self.connection
-                )
-                if value is None and not field.null and not field.primary_key:
-                    raise IntegrityError("You can't set %s (a non-nullable "
-                                         "field) to None!" % field.name)
-
-                # Prepare value for database, note that query.values have
-                # already passed through get_db_prep_save.
-                value = self.ops.value_for_db(value, field)
-
-                field_values[field.column] = value
-            to_insert.append(field_values)
-
-        key = self.insert(to_insert, return_id=return_id)
-
-        # Pass the key value through normal database deconversion.
-        return self.ops.convert_values(self.ops.value_from_db(key, pk_field), pk_field)
-
     @safe_call
     def insert(self, data_list, return_id=False):
         opts = self.query.get_meta()
