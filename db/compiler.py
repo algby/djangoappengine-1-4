@@ -127,6 +127,7 @@ class GAEQuery(NonrelQuery):
                 key = entity.key()
             if key in self.excluded_pks:
                 continue
+
             yield self._make_entity(entity)
 
         if executed and not isinstance(query, MultiQuery):
@@ -385,8 +386,10 @@ class SQLInsertCompiler(NonrelInsertCompiler, SQLCompiler):
 
         from djangoappengine.fields import GAEKeyField
 
-        if isinstance(pk_field, GAEKeyField) and pk_field._parent_key:
+        if isinstance(pk_field, GAEKeyField) and pk_field._parent_key \
+           and pk_field not in self.query.fields:
             #If we have a parent_key set, then add this to the insert query
+
             self.query.fields.insert(0, pk_field)
             return_id = True
 

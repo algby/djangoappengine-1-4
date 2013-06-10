@@ -46,7 +46,7 @@ class GAEKeyField(AutoField):
 
     def get_db_prep_value(self, value, connection, prepared=False):
         if self._parent_key:
-            return Key.from_path(self.model._meta.db_table, self._id, parent=self._parent_key)
+            return Key.from_path(self.model._meta.db_table, value or self._id, parent=self._parent_key)
 
         return super(GAEKeyField, self).get_db_prep_value(value, connection, prepared)
 
@@ -69,8 +69,10 @@ class GAEKeyField(AutoField):
                     self._parent_key,
                     1
                 )[0]
-
                 return None
+            else:
+                self._id = value.key_id
+
             #Return the generated ID
             return value.key_id
         else:
