@@ -23,8 +23,14 @@ class AncestorQueryTest(TestCase):
             self.fail("Allowing saving unspecified parents!")
 
         parent.save()
+        import ipdb; ipdb.set_trace()
         ChildModel.objects.create(id=1)
+
+        ChildModel.objects.create()
+        ChildModel.objects.create()
+
         child = ChildModel.objects.create(id=AncestorKey(parent))
+        import ipdb; ipdb.set_trace()
 
         self.assertTrue(child.pk) #Should be populated
         self.assertTrue(isinstance(child.pk, AncestorKey))

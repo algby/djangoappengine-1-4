@@ -53,6 +53,7 @@ class AncestorKey(object):
             self._parent_key,
             1
         )[0]
+        print "allocated myself", self.key_id
 
     def __eq__(self, other):
         return self._parent_key == other._parent_key and self.key_id == other.key_id
