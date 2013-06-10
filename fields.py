@@ -49,14 +49,19 @@ class AncestorKey(object):
         self._parent_key = Key.from_path(self._parent_model._meta.db_table, ancestor_pk)
         self._parent_cache = ancestor
 
-        self.key_id = key_id or db.allocate_ids(
-            self._parent_key,
-            1
-        )[0]
-        print "allocated myself", self.key_id
+        self.key_id = key_id
 
     def __eq__(self, other):
         return self._parent_key == other._parent_key and self.key_id == other.key_id
+
+    def parent(self):
+        return self._parent_key
+
+    def id(self):
+        return self.key_id
+
+    def name(self):
+        return None
 
 
 class GAEKeyField(AutoField):
@@ -79,10 +84,12 @@ class GAEKeyField(AutoField):
 
     def get_db_prep_value(self, value, connection, prepared=False):
         if isinstance(value, AncestorKey):
+            # If the key isn't fully initialized pass it through, the InserCompiler will handle it
+            if value.key_id is None:
+                return value
             return Key.from_path(
                 self.model._meta.db_table,
                 value.key_id,
                 parent=value._parent_key
             )
-
         return super(GAEKeyField, self).get_db_prep_value(value, connection)

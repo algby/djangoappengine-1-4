@@ -23,6 +23,7 @@ from djangotoolbox.db.basecompiler import (
 from .db_settings import get_model_indexes
 from .expressions import ExpressionEvaluator
 from .utils import commit_locked
+from ..fields import AncestorKey
 
 
 # Valid query types (a dictionary is used for speedy lookups).
@@ -384,6 +385,7 @@ class SQLInsertCompiler(NonrelInsertCompiler, SQLCompiler):
                           for name in unindexed_fields]
 
         entity_list = []
+        ancestor_keys = []
         for data in data_list:
             properties = {}
             kwds = {'unindexed_properties': unindexed_cols}
@@ -393,6 +395,8 @@ class SQLInsertCompiler(NonrelInsertCompiler, SQLCompiler):
                 # automatically create a new key if neither is given.
                 if column == opts.pk.column:
                     if value is not None:
+                        if isinstance(value, AncestorKey):
+                            ancestor_keys.append(value)
                         kwds['id'] = value.id()
                         kwds['name'] = value.name()
                         kwds['parent'] = value.parent()
@@ -411,6 +415,10 @@ class SQLInsertCompiler(NonrelInsertCompiler, SQLCompiler):
             entity_list.append(entity)
 
         keys = Put(entity_list)
+        if ancestor_keys and len(ancestor_keys) == len(keys):
+            for ancestor_key, key in zip(ancestor_keys, keys):
+                ancestor_key.key_id = key.id_or_name()
+
         return keys[0] if isinstance(keys, list) else keys
 
 
