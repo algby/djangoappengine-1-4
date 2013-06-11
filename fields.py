@@ -27,20 +27,41 @@ class PossibleDescendent(object):
         return qs
 
     def parent(self):
-        return self.pk.ancestor if isinstance(self.pk, AncestorKey) else None
+        if not isinstance(self.pk, AncestorKey):
+            return None
+        ak = self.pk
+
+        if ak._parent_cache is None:
+            ak._parent_cache = ak._parent_model.objects.get(pk=ak._parent_key.id_or_name())
+        return ak._parent_cache
+
 
 class AncestorKey(object):
-    def __init__(self, ancestor, key_id=None):
-        self.ancestor = ancestor
+    def __init__(self, ancestor=None, key_id=None, ancestor_pk=None, ancestor_model=None):
+        if ancestor is not None:
+            assert ancestor.pk is not None, "You must provide a parent with a key"
+            self._parent_model = type(ancestor)
+            ancestor_pk = ancestor.pk
+        else:
+            assert ancestor_pk is not None and ancestor_model is not None, "You must provide an ancestor_model and ancestor_pk or an ancestor instance"
+            self._parent_model = ancestor_model
 
-        parent_key = Key.from_path(ancestor._meta.db_table, ancestor.pk)
-        self.key_id = key_id or db.allocate_ids(
-            parent_key,
-            1
-        )[0]
+        self._parent_key = Key.from_path(self._parent_model._meta.db_table, ancestor_pk)
+        self._parent_cache = ancestor
+
+        self.key_id = key_id
 
     def __eq__(self, other):
-        return self.ancestor == other.ancestor and self.key_id == other.key_id
+        return self._parent_key == other._parent_key and self.key_id == other.key_id
+
+    def parent(self):
+        return self._parent_key
+
+    def id(self):
+        return self.key_id
+
+    def name(self):
+        return None
 
 
 class GAEKeyField(AutoField):
@@ -63,11 +84,12 @@ class GAEKeyField(AutoField):
 
     def get_db_prep_value(self, value, connection, prepared=False):
         if isinstance(value, AncestorKey):
-            parent_key = Key.from_path(self.ancestor_model._meta.db_table, value.ancestor.pk)
+            # If the key isn't fully initialized pass it through, the InserCompiler will handle it
+            if value.key_id is None:
+                return value
             return Key.from_path(
                 self.model._meta.db_table,
                 value.key_id,
-                parent=parent_key
+                parent=value._parent_key
             )
-
         return super(GAEKeyField, self).get_db_prep_value(value, connection)
