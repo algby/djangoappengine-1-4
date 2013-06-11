@@ -28,6 +28,7 @@ from ..boot import DATA_ROOT
 from ..utils import appid, on_production_server
 from .creation import DatabaseCreation
 from .stubs import stub_manager
+from ..fields import AncestorKey
 
 
 DATASTORE_PATHS = {
@@ -161,7 +162,7 @@ class DatabaseOperations(NonrelDatabaseOperations):
                 value = value[:500]
 
             try:
-                if not isinstance(value, Key):
+                if not isinstance(value, (Key, AncestorKey)):
                     value = key_from_path(field.model._meta.db_table, value)
             except (BadArgumentError, BadValueError,):
                 raise DatabaseError("Only strings and positive integers "
@@ -205,7 +206,8 @@ class DatabaseOperations(NonrelDatabaseOperations):
             if value.parent():
                 from djangoappengine.fields import AncestorKey
                 value = AncestorKey(
-                    ancestor=field.ancestor_model.objects.get(pk=value.parent().id_or_name()),
+                    ancestor_model=field.ancestor_model,
+                    ancestor_pk=value.parent().id_or_name(),
                     key_id=value.id_or_name()
                 )
             else:
