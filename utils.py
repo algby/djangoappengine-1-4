@@ -24,12 +24,14 @@ def appid():
 on_production_server = 'SERVER_SOFTWARE' in os.environ and not os.environ['SERVER_SOFTWARE'].startswith("Development")
 
 
-def bulk_create(instances):
+def bulk_create(instances, connection=None):
     """
         Uses AppEngine's bulk Put() call on a number of instances
         this will NOT call save() but it will return the instances
         with their primary_key populated (unlike Django's bulk_create)
     """
+    if connection is None:
+        from django.db import connection
 
     from .fields import AncestorKey
 
@@ -42,17 +44,9 @@ def bulk_create(instances):
         result = Entity(instance._meta.db_table, parent=parent)
 
         for field in instance._meta.fields:
-            if field.name == "id": continue
-
-            value = None
-            key = field.column
-
-            value = getattr(instance, field.name)
-
-            if field.rel or hasattr(value, "pk"):
-                value = getattr(value, "pk")
-
-            result[key] = value
+            if field.name == "id":
+                continue
+            result[field.column] = field.get_db_prep_save(getattr(instance, field.attname), connection)
         return result
 
     entities = [ prepare_entity(x) for x in instances ]
