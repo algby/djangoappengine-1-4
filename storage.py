@@ -27,7 +27,9 @@ def prepare_upload(request, url, **kwargs):
 
 
 def serve_file(request, file, save_as, content_type, **kwargs):
-    if hasattr(file, 'file') and hasattr(file.file, 'blobstore_info'):
+    if isinstance(file, BlobKey):
+        blobkey = file
+    elif hasattr(file, 'file') and hasattr(file.file, 'blobstore_info'):
         blobkey = file.file.blobstore_info.key()
     elif hasattr(file, 'blobstore_info'):
         blobkey = file.blobstore_info.key()
@@ -42,9 +44,11 @@ def serve_file(request, file, save_as, content_type, **kwargs):
         response[BLOB_RANGE_HEADER] = http_range
     if save_as:
         response['Content-Disposition'] = smart_str(
-            u'attachment; filename=%s' % save_as)
-    if file.size is not None:
-        response['Content-Length'] = file.size
+            u'attachment; filename="%s"' % save_as)
+
+    info = BlobInfo.get(blobkey)
+    if info.size is not None:
+        response['Content-Length'] = info.size
     return response
 
 
