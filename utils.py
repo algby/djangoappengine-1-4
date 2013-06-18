@@ -47,6 +47,8 @@ def bulk_create(instances, connection=None):
             if field.name == "id":
                 continue
 
+            value = field.pre_save(instance, True)
+            setattr(instance, field.name, value)
             value = field.get_db_prep_save(getattr(instance, field.attname), connection)
             if isinstance(value, (list, set)):
                 value = list(value)
@@ -60,8 +62,10 @@ def bulk_create(instances, connection=None):
 
     keys = Put(entities)
 
-    for i in xrange(len(keys)):
-        key = keys[i]
+    assert(len(keys) == len(entities))
+
+    for i, key in enumerate(keys):
+        assert(key)
 
         if key.parent():
             instances[i]._parent_key = key.parent()
