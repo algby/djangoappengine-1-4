@@ -46,7 +46,14 @@ def bulk_create(instances, connection=None):
         for field in instance._meta.fields:
             if field.name == "id":
                 continue
-            result[field.column] = field.get_db_prep_save(getattr(instance, field.attname), connection)
+
+            value = field.get_db_prep_save(getattr(instance, field.attname), connection)
+            if isinstance(value, (list, set)):
+                value = list(value)
+                if not value:
+                    value = None
+
+            result[field.column] = value
         return result
 
     entities = [ prepare_entity(x) for x in instances ]
