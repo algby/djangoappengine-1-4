@@ -71,6 +71,16 @@ class Command(BaseCommand):
     args = "[any appcfg.py options]"
 
     def run_from_argv(self, argv):
+        from djangoappengine.boot import PROJECT_DIR
+        app_yaml = open(os.path.join(PROJECT_DIR, "app.yaml")).read()
+
+        app_version = app_yaml.split("version:")[1].lstrip().split()[0]
+        app_name = app_yaml.split("application:")[1].lstrip().split()[0]
+
+        os.environ['DEFAULT_VERSION_HOSTNAME'] = "%s.appspot.com" % app_name
+        os.environ['APPLICATION_ID'] = "s~" + app_name
+        os.environ['CURRENT_VERSION_ID'] = app_version
+
         for command in PRE_DEPLOY_COMMANDS:
             if isinstance(command, (list, tuple)):
                 #If this is a path to a binary, then run that with the arguments
