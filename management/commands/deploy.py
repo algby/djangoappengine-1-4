@@ -9,7 +9,7 @@ from django.core.management.base import BaseCommand
 
 from ...boot import PROJECT_DIR
 from ...utils import appconfig
-from subprocess import check_output
+from subprocess import check_output, PIPE, Popen
 
 PRE_DEPLOY_COMMANDS = ()
 if 'mediagenerator' in settings.INSTALLED_APPS:
@@ -85,7 +85,8 @@ class Command(BaseCommand):
             if isinstance(command, (list, tuple)):
                 #If this is a path to a binary, then run that with the arguments
                 if os.path.exists(command[0]):
-                    print check_output(command)
+                    p = Popen(command, stdin=sys.stdin, stdout=sys.stdout)
+                    p.communicate()
                 else:
                     call_command(command[0], *command[1], **command[2])
             else:
@@ -94,4 +95,12 @@ class Command(BaseCommand):
             run_appcfg(argv)
         finally:
             for command in POST_DEPLOY_COMMANDS:
-                call_command(command)
+                if isinstance(command, (list, tuple)):
+                    #If this is a path to a binary, then run that with the arguments
+                    if os.path.exists(command[0]):
+                        p = Popen(command, stdin=sys.stdin, stdout=sys.stdout)
+                        p.communicate()
+                    else:
+                        call_command(command[0], *command[1], **command[2])
+                else:
+                    call_command(command)
