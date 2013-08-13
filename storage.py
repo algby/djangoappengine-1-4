@@ -1,5 +1,6 @@
 import mimetypes
 import os
+import re
 
 try:
     from cStringIO import StringIO
