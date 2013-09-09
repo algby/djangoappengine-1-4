@@ -3,6 +3,7 @@ import os
 import time
 from urllib2 import HTTPError, URLError
 
+from google.appengine.api.search.simple_search_stub import SearchServiceStub
 from google.appengine.ext.testbed import Testbed
 
 from ..boot import PROJECT_DIR
@@ -64,6 +65,7 @@ class StubManager(object):
         self.testbed.init_user_stub()
         self.testbed.init_xmpp_stub()
         self.testbed.init_channel_stub()
+        self.testbed._register_stub("search", SearchServiceStub())
 
     def deactivate_test_stubs(self):
         if self.active_stubs == 'test':
