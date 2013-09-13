@@ -39,7 +39,6 @@ def run_appcfg(argv):
         new_args.remove('--nosyncdb')
     appcfg.main(new_args)
 
-    from ...db.base import DatabaseWrapper
     from ...db.stubs import stub_manager
 
     if syncdb:
@@ -51,7 +50,8 @@ def run_appcfg(argv):
         from django.db import connections
 
         for connection in connections.all():
-            if isinstance(connection, DatabaseWrapper):
+            #If we don't support joins, assume this is the datastore
+            if not connection.features.supports_joins:
                 stub_manager.setup_remote_stubs(connection)
         call_command('syncdb', remote=True, interactive=True)
 
