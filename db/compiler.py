@@ -342,9 +342,18 @@ class GAEQuery(NonrelQuery):
             return []
 
         #Shortcut for pk__in=[] queries
-        if len(self.query.where.children) == 1 and \
-           len(self.query.where.children[0].children) == 1 and \
-           self.query.where.children[0].children[0][0].field.name == self.query.model._meta.pk.name:
+        where = self.query.where
+        pk_field = self.query.model._meta.pk
+
+        #Go through all levels of the tree until we get to a point where either there isn't a
+        #"children" attribute, or there is but it doesn't have a length of one
+        # If the result is a tuple, then we are at the bottom of the tree and the only constraint
+        # was on the PK, otherwise, there were other filters and we need to run matches_filters() on each
+        # entity (slower)
+        while len(getattr(where, "children", [])) == 1:
+            where = where.children[0]
+
+        if isinstance(where, tuple) and where[0].field == pk_field:
             results = [ x for x in Get(self.included_pks) if x is not None ]
         else:
             results = [ x for x in Get(self.included_pks) if x is not None and self.matches_filters(x) ]
