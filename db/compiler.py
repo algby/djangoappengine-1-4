@@ -340,15 +340,19 @@ class GAEQuery(NonrelQuery):
     def get_matching_pk(self, low_mark=0, high_mark=None):
         if not self.included_pks:
             return []
-        results = [result for result in Get(self.included_pks)
-                   if result is not None and
-                       self.matches_filters(result)]
+
+        #Shortcut for pk__in=[] queries
+        if len(self.query.where.children) == 1 and \
+           len(self.query.where.children[0].children) == 1 and \
+           self.query.where.children[0].children[0][0].field.name == self.query.model._meta.pk.name:
+            results = [ x for x in Get(self.included_pks) if x is not None ]
+        else:
+            results = [ x for x in Get(self.included_pks) if x is not None and self.matches_filters(x) ]
+
         if self.ordering:
             results.sort(cmp=self.order_pk_filtered)
-        if high_mark is not None and high_mark < len(results) - 1:
-            results = results[:high_mark]
-        if low_mark:
-            results = results[low_mark:]
+
+        results = results[low_mark:high_mark]
         return results
 
     def order_pk_filtered(self, lhs, rhs):
