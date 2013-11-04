@@ -200,7 +200,7 @@ class GAEQuery(NonrelQuery):
 
         # GAE does not let you store empty lists, so we can tell
         # upfront that queriying for one will return nothing.
-        if value in ([], ()):
+        if value in ([], ()) and not negated:
             self.included_pks = []
             return
 
