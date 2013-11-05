@@ -1,5 +1,6 @@
 import logging
 import os
+from django.utils.importlib import import_module
 
 def validate_models():
     """
@@ -30,14 +31,23 @@ from djangoappengine.utils import on_production_server
 if not on_production_server:
     validate_models()
 
-from django.conf import settings
-
 class DjangoAppEngineMiddleware:
-    def __init__(self, app):
+    def __init__(self, app, setup_signals=False):
         self.settings_module = os.environ['DJANGO_SETTINGS_MODULE']
 
         from djangoappengine.boot import setup_env
         setup_env()
+
+        from django.conf import settings
+
+        if setup_signals:
+            # Load all models.py to ensure signal handling installation or index
+            # loading of some apps.
+            for app_to_import in settings.INSTALLED_APPS:
+                try:
+                    import_module('%s.models' % app_to_import)
+                except ImportError:
+                    pass
 
         ## In vanilla Django, staticfiles overrides runserver to use StaticFilesHandler
         ## if necessary. As we can't do this in our runserver (because we handover to dev_appserver)

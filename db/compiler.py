@@ -200,7 +200,7 @@ class GAEQuery(NonrelQuery):
 
         # GAE does not let you store empty lists, so we can tell
         # upfront that queriying for one will return nothing.
-        if value in ([], ()):
+        if value in ([], ()) and not negated:
             self.included_pks = []
             return
 
@@ -340,15 +340,28 @@ class GAEQuery(NonrelQuery):
     def get_matching_pk(self, low_mark=0, high_mark=None):
         if not self.included_pks:
             return []
-        results = [result for result in Get(self.included_pks)
-                   if result is not None and
-                       self.matches_filters(result)]
+
+        #Shortcut for pk__in=[] queries
+        where = self.query.where
+        pk_field = self.query.model._meta.pk
+
+        #Go through all levels of the tree until we get to a point where either there isn't a
+        #"children" attribute, or there is but it doesn't have a length of one
+        # If the result is a tuple, then we are at the bottom of the tree and the only constraint
+        # was on the PK, otherwise, there were other filters and we need to run matches_filters() on each
+        # entity (slower)
+        while len(getattr(where, "children", [])) == 1:
+            where = where.children[0]
+
+        if isinstance(where, tuple) and where[0].field == pk_field:
+            results = [ x for x in Get(self.included_pks) if x is not None ]
+        else:
+            results = [ x for x in Get(self.included_pks) if x is not None and self.matches_filters(x) ]
+
         if self.ordering:
             results.sort(cmp=self.order_pk_filtered)
-        if high_mark is not None and high_mark < len(results) - 1:
-            results = results[:high_mark]
-        if low_mark:
-            results = results[low_mark:]
+
+        results = results[low_mark:high_mark]
         return results
 
     def order_pk_filtered(self, lhs, rhs):
