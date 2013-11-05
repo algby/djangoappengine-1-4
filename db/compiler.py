@@ -341,22 +341,7 @@ class GAEQuery(NonrelQuery):
         if not self.included_pks:
             return []
 
-        #Shortcut for pk__in=[] queries
-        where = self.query.where
-        pk_field = self.query.model._meta.pk
-
-        #Go through all levels of the tree until we get to a point where either there isn't a
-        #"children" attribute, or there is but it doesn't have a length of one
-        # If the result is a tuple, then we are at the bottom of the tree and the only constraint
-        # was on the PK, otherwise, there were other filters and we need to run matches_filters() on each
-        # entity (slower)
-        while len(getattr(where, "children", [])) == 1:
-            where = where.children[0]
-
-        if isinstance(where, tuple) and where[0].field == pk_field:
-            results = [ x for x in Get(self.included_pks) if x is not None ]
-        else:
-            results = [ x for x in Get(self.included_pks) if x is not None and self.matches_filters(x) ]
+        results = self.results_match_filters(Get(self.included_pks), self.query.where)
 
         if self.ordering:
             results.sort(cmp=self.order_pk_filtered)
@@ -370,6 +355,98 @@ class GAEQuery(NonrelQuery):
         right = dict(rhs)
         right[self.query.get_meta().pk.column] = rhs.key().to_path()
         return self._order_in_memory(left, right)
+
+    def results_match_filters(self, results, query_where):
+        """
+        [('AND',
+          [(<django.db.models.fields.CharField: session_key>,
+            'exact',
+            datastore_types.Key.from_path(u'django_session', u'128d5afd0780589c84b5edee0333372d', _app=u'dev~g-exams')),
+           (<django.db.models.fields.DateTimeField: expire_date>,
+            'gt',
+            datetime.datetime(2013, 11, 5, 12, 45, 21, 50799))])]
+        """
+        import datetime
+        from djangotoolbox.db.basecompiler import EMULATED_OPS
+
+        class ParseNode(object):
+            def __init__(self, where):
+                self.connector = where.connector
+                self.children = []
+                self.negated = where.negated
+
+            def matches(self, item):
+                result = self.connector == AND
+
+                for child in self.children:
+                    if isinstance(child, ParseNode):
+                        submatch = child.matches(item)
+                    else:
+                        field, lookup_type, lookup_value = child
+
+                        entity_value = item[field.column]
+
+                        if entity_value is None:
+                            if isinstance(lookup_value, (datetime.datetime, datetime.date,
+                                                  datetime.time)):
+                                submatch = lookup_type in ('lt', 'lte')
+                            elif lookup_type in (
+                                    'startswith', 'contains', 'endswith', 'iexact',
+                                    'istartswith', 'icontains', 'iendswith'):
+                                submatch = False
+                            else:
+                                submatch = EMULATED_OPS[lookup_type](
+                                    entity_value, lookup_value)
+                        else:
+                            submatch = EMULATED_OPS[lookup_type](
+                                entity_value, lookup_value)
+
+                    if self.connector == OR and submatch:
+                        result = True
+                        break
+                    elif self.connector == AND and not submatch:
+                        result = False
+                        break
+
+                if self.negated:
+                    return not result
+
+                return result
+
+        def _parse_tree(_where):
+            if isinstance(_where, tuple):
+                return self._decode_child(_where)
+
+            node = ParseNode(_where)
+
+            for child in _where.children:
+                if isinstance(child, Node) and child.children:
+                    if len(child.children) == 1:
+                        next_level = _parse_tree(child.children[0])
+                    else:
+                        next_level = _parse_tree(child)
+                else:
+                    next_level = self._decode_child(child)
+
+                node.children.append(next_level)
+
+            return node
+
+        tree = _parse_tree(query_where)
+
+        output = []
+        for entity in results:
+            if entity is None:
+                continue
+
+            item = dict(entity)
+            item[self.query.get_meta().pk.column] = entity.key()
+
+            if tree.matches(item):
+                output.append(entity)
+
+        return output
+
 
     def matches_filters(self, entity):
         """
