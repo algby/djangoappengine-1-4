@@ -1,12 +1,11 @@
 # Initialize App Engine SDK if necessary.
-try:
-    from google.appengine.api import apiproxy_stub_map
-except ImportError:
-    from .boot import setup_env
+
+from .boot import initialized, setup_env
+
+if not initialized():
     setup_env()
 
 from djangoappengine.utils import on_production_server, have_appserver
-
 
 DEBUG = not on_production_server
 TEMPLATE_DEBUG = DEBUG

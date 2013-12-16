@@ -21,13 +21,23 @@ env_ext = {}
 if 'DJANGO_SETTINGS_MODULE' not in os.environ:
     env_ext['DJANGO_SETTINGS_MODULE'] = 'settings'
 
+def initialized():
+    return "DJANGOAPPENGINE_INITIALIZED" in os.environ
+
+def mark_initialized():
+    os.environ["DJANGOAPPENGINE_INITIALIZED"] = "1"
 
 def setup_env():
     """Configures GAE environment for command-line apps."""
+    if initialized():
+        return
 
     # Try to import the appengine code from the system path.
     try:
         from google.appengine.api import apiproxy_stub_map
+
+        import google
+        sdk_path = os.path.dirname(os.path.dirname(google.__file__))
     except ImportError:
         for k in [k for k in sys.modules if k.startswith('google')]:
             del sys.modules[k]
@@ -39,6 +49,7 @@ def setup_env():
                  os.environ.get('APP_ENGINE_SDK'),
                  '/usr/local/google_appengine',
                  '/Applications/GoogleAppEngineLauncher.app/Contents/Resources/GoogleAppEngine-default.bundle/Contents/Resources/google_appengine']
+
         for path in os.environ.get('PATH', '').split(os.pathsep):
             path = path.rstrip(os.sep)
             if path.endswith('google_appengine'):
@@ -65,14 +76,14 @@ def setup_env():
                              "environment and called google_appengine.\n")
             sys.exit(1)
 
-        DJANGOAPPENGINE_LIB_PATH = os.path.join(os.path.abspath(os.path.dirname(__file__)), "lib")
+    DJANGOAPPENGINE_LIB_PATH = os.path.join(os.path.abspath(os.path.dirname(__file__)), "lib")
 
-        # First add the found SDK to the path
-        sys.path = [ sdk_path, DJANGOAPPENGINE_LIB_PATH ] + sys.path
+    # First add the found SDK to the path
+    sys.path = [ sdk_path, DJANGOAPPENGINE_LIB_PATH ] + sys.path
 
-        # Then call fix_sys_path from the SDK
-        from dev_appserver import fix_sys_path
-        fix_sys_path()
+    # Then call fix_sys_path from the SDK
+    from dev_appserver import fix_sys_path
+    fix_sys_path()
 
     libraries_dir = os.path.join(PROJECT_DIR, "libraries")
     if libraries_dir not in sys.path:
@@ -92,6 +103,8 @@ def setup_env():
         # files.
         from django.core import management
         management.find_commands = find_commands
+
+    mark_initialized()
 
 
 def find_commands(management_dir):
