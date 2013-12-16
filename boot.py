@@ -45,10 +45,12 @@ def setup_env():
         # Not on the system path. Build a list of alternative paths
         # where it may be. First look within the project for a local
         # copy, then look for where the Mac OS SDK installs it.
-        paths = [os.path.join(PROJECT_DIR, 'google_appengine'),
-                 os.environ.get('APP_ENGINE_SDK'),
-                 '/usr/local/google_appengine',
-                 '/Applications/GoogleAppEngineLauncher.app/Contents/Resources/GoogleAppEngine-default.bundle/Contents/Resources/google_appengine']
+        paths = [
+            os.path.join(PROJECT_DIR, 'google_appengine'),
+            os.environ.get('APP_ENGINE_SDK'),
+            '/usr/local/google_appengine',
+            '/Applications/GoogleAppEngineLauncher.app/Contents/Resources/GoogleAppEngine-default.bundle/Contents/Resources/google_appengine'
+        ]
 
         for path in os.environ.get('PATH', '').split(os.pathsep):
             path = path.rstrip(os.sep)
@@ -76,14 +78,19 @@ def setup_env():
                              "environment and called google_appengine.\n")
             sys.exit(1)
 
+        sys.path = [ sdk_path ] + sys.path
+
     DJANGOAPPENGINE_LIB_PATH = os.path.join(os.path.abspath(os.path.dirname(__file__)), "lib")
 
     # First add the found SDK to the path
-    sys.path = [ sdk_path, DJANGOAPPENGINE_LIB_PATH ] + sys.path
+    sys.path = [ DJANGOAPPENGINE_LIB_PATH ] + sys.path
 
-    # Then call fix_sys_path from the SDK
-    from dev_appserver import fix_sys_path
-    fix_sys_path()
+    try:
+        # Then call fix_sys_path from the SDK
+        from dev_appserver import fix_sys_path
+        fix_sys_path()
+    except ImportError:
+        pass #Live doesn't have dev_appserver
 
     libraries_dir = os.path.join(PROJECT_DIR, "libraries")
     if libraries_dir not in sys.path:
