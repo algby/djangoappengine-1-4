@@ -2,6 +2,8 @@ from cStringIO import StringIO
 from django.core.files.uploadhandler import StopFutureHandlers
 from django.test import TestCase, RequestFactory
 
+from ..storage import BlobstoreFileUploadHandler
+
 
 class BlobstoreFileUploadHandlerTest(TestCase):
     boundary = "===============7417945581544019063=="
