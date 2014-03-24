@@ -176,14 +176,14 @@ class BlobstoreFileUploadHandler(FileUploadHandler):
         """
         Add the data to the StringIO file.
         """
-        if not self.active:
+        if not self.blobkey:
             return raw_data
 
     def file_complete(self, file_size):
         """
         Return a file object if we're activated.
         """
-        if not self.active:
+        if not self.blobkey:
             return
 
         return BlobstoreUploadedFile(
