@@ -199,6 +199,16 @@ class BlobstoreFileUploadHandler(FileUploadHandler):
         else:
             return super(BlobstoreFileUploadHandler, self).new_file(field_name, file_name, content_type, content_length, charset)
 
+    def handle_raw_input(self, input_data, META, content_length, boundary, encoding):
+        """
+            App Engine, for some reason, allows seeking back the wsgi.input. However, FakePayload during testing (correctly) does not
+            because that's what the WSGI spec says. However, to make this work we need to abuse the seeking (at least till Django 1.7)
+        """
+        data = StringIO(input_data.body) #Create a string IO object
+        self.request.META['wsgi.input'] = data #Replace the wsgi.input
+
+        return None #Pass back to Django
+
     def receive_data_chunk(self, raw_data, start):
         """
         Add the data to the StringIO file.
