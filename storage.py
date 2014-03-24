@@ -163,19 +163,10 @@ class BlobstoreFileUploadHandler(FileUploadHandler):
             We can kill a lot of this hackery in Django 1.7 when content_type_extra is actually passed in!
         """
 
-        def _guess_boundary(_data):
-            """According to wikipedia, the boundary always ends a message but is followed by, and prefixed by '--'
-            so theoretically, this should always return the correct boundary. Unless I'm wrong, in which case it won't."""
-            boundary = _data.rsplit("--")[-2].strip()
-            if not boundary:
-                raise ValueError("Unable to determine MIME boundary")
-            return boundary
+        self.data.seek(0) #Rewind
+        data = self.data.read()
 
-        wsgi_input = self.request.META['wsgi.input']
-        wsgi_input.seek(0) #Rewind
-        data = wsgi_input.read()
-
-        parts = data.split(_guess_boundary(data))
+        parts = data.split(self.boundary)
 
         for part in parts:
             match = re.search('blob-key="(?P<blob_key>\S+)"', part)
@@ -204,9 +195,8 @@ class BlobstoreFileUploadHandler(FileUploadHandler):
             App Engine, for some reason, allows seeking back the wsgi.input. However, FakePayload during testing (correctly) does not
             because that's what the WSGI spec says. However, to make this work we need to abuse the seeking (at least till Django 1.7)
         """
-        data = StringIO(input_data.body) #Create a string IO object
-        self.request.META['wsgi.input'] = data #Replace the wsgi.input
-
+        self.boundary = boundary
+        self.data = StringIO(input_data.body) #Create a string IO object
         return None #Pass back to Django
 
     def receive_data_chunk(self, raw_data, start):
