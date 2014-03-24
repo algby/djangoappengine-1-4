@@ -166,7 +166,10 @@ class BlobstoreFileUploadHandler(FileUploadHandler):
         def _guess_boundary(_data):
             """According to wikipedia, the boundary always ends a message but is followed by, and prefixed by '--'
             so theoretically, this should always return the correct boundary. Unless I'm wrong, in which case it won't."""
-            return _data.rsplit("--")[-2]
+            boundary = _data.rsplit("--")[-2].strip()
+            if not boundary:
+                raise ValueError("Unable to determine MIME boundary")
+            return boundary
 
         wsgi_input = self.request.META['wsgi.input']
         wsgi_input.seek(0) #Rewind
