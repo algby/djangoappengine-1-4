@@ -156,21 +156,45 @@ class BlobstoreFileUploadHandler(FileUploadHandler):
     """
     def __init__(self, request=None):
         super(BlobstoreFileUploadHandler, self).__init__(request)
-        self.content_type_extras = {}
+        self.blobkey = None
 
-    def new_file(self, field_name, file_name, content_type, content_length, charset=None):
-        result = super(BlobstoreFileUploadHandler, self).new_file(field_name, file_name, content_type, content_length, charset)
+    def new_file(self, field_name, file_name, content_type, content_length, charset=None, content_type_extra=None):
+        """
+            We can kill a lot of this hackery in Django 1.7 when content_type_extra is actually passed in!
+        """
 
-        ct_header = self.request.META.get("content-type")
-        if not ct_header or "blob-key" not in ct_header:
-            return result
+        def _guess_boundary(_data):
+            """According to wikipedia, the boundary always ends a message but is followed by, and prefixed by '--'
+            so theoretically, this should always return the correct boundary. Unless I'm wrong, in which case it won't."""
+            return _data.rsplit("--")[-2]
 
-        parts = [ [ y.strip("'").strip('"').strip() for y in x.split("=", 1) ] for x in ct_header.split(";") if len(x.split("=", 1)) == 2]
-        self.blobkey = dict(parts).get("blob-key")
+        wsgi_input = self.request.META['wsgi.input']
+        wsgi_input.seek(0) #Rewind
+        data = wsgi_input.read()
+
+        parts = data.split(_guess_boundary(data))
+
+        for part in parts:
+            match = re.search('blob-key="(?P<blob_key>\S+)"', part)
+            blob_key = match.groupdict().get('blob_key') if match else None
+
+            if not blob_key:
+                continue
+
+            #OK, we have a blob key, but is it the one for the field?
+            match = re.search('name="(?P<field_name>\S+)"', part)
+            name = match.groupdict().get('field_name') if match else None
+            if name != field_name:
+                #Nope, not for this field
+                continue
+
+            self.blobkey = blob_key
 
         if self.blobkey:
             self.blobkey = BlobKey(self.blobkey)
             raise StopFutureHandlers()
+        else:
+            return super(BlobstoreFileUploadHandler, self).new_file(field_name, file_name, content_type, content_length, charset)
 
     def receive_data_chunk(self, raw_data, start):
         """
