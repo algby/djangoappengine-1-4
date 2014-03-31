@@ -82,7 +82,7 @@ class StubManager(object):
         args.update(connection.settings_dict.get('DEV_APPSERVER_OPTIONS', {}))
         log_level = logging.getLogger().getEffectiveLevel()
         logging.getLogger().setLevel(logging.WARNING)
-        from google.appengine.tools import dev_appserver
+        from google.appengine.tools import old_dev_appserver as dev_appserver
         dev_appserver.SetupStubs('dev~' + appid, **args)
         logging.getLogger().setLevel(log_level)
         self.active_stubs = 'local'
