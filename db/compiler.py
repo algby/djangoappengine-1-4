@@ -8,6 +8,7 @@ from django.db.models.sql.constants import LOOKUP_SEP, MULTI, SINGLE
 from django.db.models.sql.where import AND, OR
 from django.db.utils import DatabaseError, IntegrityError
 from django.utils.tree import Node
+from django.db.models.sql.compiler import MULTI, empty_iter
 
 from google.appengine.api.datastore import Entity, Query, MultiQuery, \
     Put, Get, Delete
@@ -22,6 +23,7 @@ from djangotoolbox.db.basecompiler import (
     NonrelUpdateCompiler,
     NonrelDeleteCompiler)
 
+from .base import InvalidGaeKey
 from .db_settings import get_model_indexes
 from .expressions import ExpressionEvaluator
 from .utils import commit_locked
@@ -183,8 +185,13 @@ class GAEQuery(NonrelQuery):
         constraint, lookup_type, annotation, value = child
         if constraint.col == '__ancestor':
             return ('id', 'ancestor', value)
-
-        return super(GAEQuery, self)._decode_child(child)
+        try:
+            return super(GAEQuery, self)._decode_child(child)
+        except InvalidGaeKey:
+            if not self._negated:
+                raise
+            else:
+                raise DatabaseError("Invalid value for a key lookup on GAE.")
 
     @safe_call
     def add_filter(self, field, lookup_type, negated, value):
@@ -476,8 +483,36 @@ class SQLCompiler(NonrelCompiler):
     """
     query_class = GAEQuery
 
+    def get_count(self, check_exists=False):
+        try:
+            return super(SQLCompiler, self).get_count(check_exists)
+        except InvalidGaeKey:
+            return 0
+
+    def execute_sql(self, result_type=MULTI):
+        try:
+            return super(SQLCompiler, self).execute_sql(result_type)
+        except InvalidGaeKey:
+            if result_type == MULTI:
+               return empty_iter()
+            else:
+                return
+
+    def results_iter(self):
+        try:
+            for x in super(SQLCompiler, self).results_iter():
+                yield x
+        except InvalidGaeKey:
+            yield iter([]).next()
+
 
 class SQLInsertCompiler(NonrelInsertCompiler, SQLCompiler):
+
+    def execute_sql(self, *a, **kw):
+        try:
+            return super(SQLInsertCompiler, self).execute_sql(*a, **kw)
+        except InvalidGaeKey:
+            raise DatabaseError("Ivalid value for a key filter on GAE.")
 
     @safe_call
     def insert(self, data_list, return_id=False):
