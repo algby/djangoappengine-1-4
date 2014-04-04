@@ -5,8 +5,6 @@ import os
 import shutil
 import warnings
 
-from django.db.utils import DatabaseError
-
 from google.appengine.api.datastore import Delete, Query
 from google.appengine.api.datastore_errors import BadArgumentError, \
     BadValueError
@@ -29,6 +27,10 @@ from ..utils import appid, on_production_server
 from .creation import DatabaseCreation
 from .stubs import stub_manager
 from ..fields import AncestorKey
+
+
+class InvalidGaeKey(ValueError):
+    """ We raise this when attempting to filter primary_key for something the datastore can't handle."""
 
 
 DATASTORE_PATHS = {
@@ -125,6 +127,12 @@ class DatabaseOperations(NonrelDatabaseOperations):
         actual datastore conversions.
         """
         super_value_for_db = super(DatabaseOperations, self).value_for_db
+        # short circuit the query if we're filtering by primary_key=None
+        # (to avoid appengine blowing up on value conversion)
+        if lookup == 'isnull' and value == True:
+            field, field_kind, db_type = self._convert_as(field, lookup)
+            if db_type == 'key':
+                raise InvalidGaeKey("A primary key can't be None on GAE.")
         if lookup == 'startswith':
             return [super_value_for_db(value, field, lookup),
                     super_value_for_db(value + u'\ufffd', field, lookup)]
@@ -166,8 +174,7 @@ class DatabaseOperations(NonrelDatabaseOperations):
                 if not isinstance(value, (Key, AncestorKey)):
                     value = key_from_path(field.model._meta.db_table, value)
             except (BadArgumentError, BadValueError,):
-                raise DatabaseError("Only strings and positive integers "
-                                    "may be used as keys on GAE.")
+                raise InvalidGaeKey("Filtering on a non key value always returns an empty result.")
 
         # Store all strings as unicode, use db.Text for longer content.
         elif db_type == 'string' or db_type == 'text':
