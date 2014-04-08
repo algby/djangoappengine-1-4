@@ -162,27 +162,27 @@ class BlobstoreFileUploadHandler(FileUploadHandler):
         """
             We can kill a lot of this hackery in Django 1.7 when content_type_extra is actually passed in!
         """
-
         self.data.seek(0) #Rewind
         data = self.data.read()
 
         parts = data.split(self.boundary)
 
         for part in parts:
-            match = re.search('blob-key="(?P<blob_key>\S+)"', part)
+            match = re.search('blob-key="?(?P<blob_key>[a-zA-Z0-9_=-]+)', part)
             blob_key = match.groupdict().get('blob_key') if match else None
 
             if not blob_key:
                 continue
 
             #OK, we have a blob key, but is it the one for the field?
-            match = re.search('name="(?P<field_name>\S+)"', part)
+            match = re.search('\sname="?(?P<field_name>[a-zA-Z0-9_]+)', part)
             name = match.groupdict().get('field_name') if match else None
             if name != field_name:
                 #Nope, not for this field
                 continue
 
             self.blobkey = blob_key
+            break
 
         if self.blobkey:
             self.blobkey = BlobKey(self.blobkey)
