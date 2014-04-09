@@ -12,6 +12,7 @@ from google.appengine.api.datastore import Entity, Query, MultiQuery, \
     Put, Get, Delete
 from google.appengine.api.datastore_errors import Error as GAEError
 from google.appengine.api.datastore_types import Key, Text
+from google.appengine.ext import db
 
 from djangotoolbox.db.basecompiler import (
     NonrelQuery,
@@ -487,6 +488,15 @@ class SQLInsertCompiler(NonrelInsertCompiler, SQLCompiler):
                     if value is not None:
                         if isinstance(value, AncestorKey):
                             ancestor_keys.append(value)
+
+                        # When inserting with a predefined key, we must tell App Engine that
+                        # it's in use
+                        @db.non_transactional
+                        def allocate_id():
+                            if value.id():
+                                db.allocate_id_range(value, value.id(), value.id())
+                        allocate_id()
+
                         kwds['id'] = value.id()
                         kwds['name'] = value.name()
                         kwds['parent'] = value.parent()
