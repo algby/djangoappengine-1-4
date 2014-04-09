@@ -1,5 +1,6 @@
 from functools import wraps
 import sys
+import logging
 
 from django.db.models.fields import AutoField
 from django.db.models.sql import aggregates as sqlaggregates
@@ -488,14 +489,6 @@ class SQLInsertCompiler(NonrelInsertCompiler, SQLCompiler):
                     if value is not None:
                         if isinstance(value, AncestorKey):
                             ancestor_keys.append(value)
-
-                        # When inserting with a predefined key, we must tell App Engine that
-                        # it's in use
-                        @db.non_transactional
-                        def allocate_id():
-                            if value.id():
-                                db.allocate_id_range(value, value.id(), value.id())
-                        allocate_id()
 
                         kwds['id'] = value.id()
                         kwds['name'] = value.name()
