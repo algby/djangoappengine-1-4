@@ -469,6 +469,27 @@ class SQLCompiler(NonrelCompiler):
 
 class SQLInsertCompiler(NonrelInsertCompiler, SQLCompiler):
 
+    def execute_sql(self, return_id=False):
+        # reserve an Id if an explicit one was given.
+        @db.non_transactional
+        def allocate_helper(table, start, end):
+            if start <= 0 or end <= 0:
+                return  # allow the actual insert to error in this case
+            alloc_ret = db.allocate_id_range(db.Key.from_path(table, 1), start, end)
+            log_method = logging.warn if alloc_ret == 'Collision' else logging.info
+            log_method("[ALLOCATE] Attempted to allocate range %s-%s for %s: %s", start, end, table, alloc_ret)
+
+        explicit_objs = [obj for obj in self.query.objs if obj._state.adding and isinstance(obj.pk, (int, long))]
+        sorted_pks = sorted([obj.pk for obj in explicit_objs])
+        if len(explicit_objs) == len(self.query.objs) and sorted_pks == range(sorted_pks[0], sorted_pks[-1]+1):
+            # If we tried to assign a continous range we can call allocate_id_range just once
+            allocate_helper(obj._meta.db_table, sorted_pks[0], sorted_pks[-1])
+        else:
+            for obj in explicit_objs:
+                allocate_helper(obj._meta.db_table, obj.pk, obj.pk)
+
+        return super(SQLInsertCompiler, self).execute_sql(return_id=return_id)
+
     @safe_call
     def insert(self, data_list, return_id=False):
         opts = self.query.get_meta()
