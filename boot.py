@@ -172,7 +172,7 @@ def setup_project():
     # enable https connections (seem to be broken on Windows because
     # the _ssl module is disallowed).
     if not have_appserver:
-        from google.appengine.tools import dev_appserver
+        from google.appengine.tools import old_dev_appserver as dev_appserver
         try:
             # Backup os.environ. It gets overwritten by the
             # dev_appserver, but it's needed by the subprocess module.
@@ -213,7 +213,7 @@ def setup_project():
             from google.appengine.api.mail_stub import subprocess
             sys.modules['subprocess'] = subprocess
             # Re-inject the buffer() builtin into the subprocess module.
-            from google.appengine.tools import dev_appserver
+            from google.appengine.tools import old_dev_appserver as dev_appserver
             subprocess.buffer = dev_appserver.buffer
         except Exception, e:
             logging.warn("Could not add the subprocess module to the "

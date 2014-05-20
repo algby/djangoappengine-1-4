@@ -1,5 +1,6 @@
 from functools import wraps
 import sys
+import logging
 
 from django.db.models.fields import AutoField
 from django.db.models.sql import aggregates as sqlaggregates
@@ -12,6 +13,7 @@ from google.appengine.api.datastore import Entity, Query, MultiQuery, \
     Put, Get, Delete
 from google.appengine.api.datastore_errors import Error as GAEError
 from google.appengine.api.datastore_types import Key, Text
+from google.appengine.ext import db
 
 from djangotoolbox.db.basecompiler import (
     NonrelQuery,
@@ -487,6 +489,7 @@ class SQLInsertCompiler(NonrelInsertCompiler, SQLCompiler):
                     if value is not None:
                         if isinstance(value, AncestorKey):
                             ancestor_keys.append(value)
+
                         kwds['id'] = value.id()
                         kwds['name'] = value.name()
                         kwds['parent'] = value.parent()

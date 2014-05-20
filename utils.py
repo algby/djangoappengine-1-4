@@ -8,7 +8,7 @@ have_appserver = bool(apiproxy_stub_map.apiproxy.GetStub('datastore_v3'))
 
 if not have_appserver:
     from .boot import PROJECT_DIR
-    from google.appengine.tools import dev_appserver
+    from google.appengine.tools import old_dev_appserver as dev_appserver
     appconfig = dev_appserver.LoadAppConfig(PROJECT_DIR, {},
                                                     default_partition='dev')[0]
 def appid():
