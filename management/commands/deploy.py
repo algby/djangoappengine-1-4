@@ -77,10 +77,6 @@ class Command(BaseCommand):
         app_version = app_yaml.split("version:")[1].lstrip().split()[0]
         app_name = app_yaml.split("application:")[1].lstrip().split()[0]
 
-        os.environ['DEFAULT_VERSION_HOSTNAME'] = "%s.appspot.com" % app_name
-        os.environ['APPLICATION_ID'] = "s~" + app_name
-        os.environ['CURRENT_VERSION_ID'] = app_version
-
         for command in PRE_DEPLOY_COMMANDS:
             if isinstance(command, (list, tuple)):
                 #If this is a path to a binary, then run that with the arguments
@@ -91,6 +87,11 @@ class Command(BaseCommand):
                     call_command(command[0], *command[1], **command[2])
             else:
                 call_command(command)
+
+        os.environ['DEFAULT_VERSION_HOSTNAME'] = "%s.appspot.com" % app_name
+        os.environ['APPLICATION_ID'] = "s~" + app_name
+        os.environ['CURRENT_VERSION_ID'] = app_version
+
         try:
             run_appcfg(argv)
         finally:
