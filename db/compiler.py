@@ -216,6 +216,10 @@ class GAEQuery(NonrelQuery):
             if not isinstance(value, (tuple, list)):
                 value = [value]
             pks = [pk for pk in value if pk is not None]
+
+            if field.rel:
+                pks = [ Key.from_path(self.db_table, pk.id_or_name()) for pk in pks ]
+
             if negated:
                 self.excluded_pks = pks
             else:
@@ -399,6 +403,12 @@ class GAEQuery(NonrelQuery):
                             else:
                                 submatch = EMULATED_OPS[lookup_type](
                                     entity_value, lookup_value)
+                        elif field.primary_key and field.rel and lookup_type == 'exact':
+                            #When we have a foreignkey that's a primary key, things get weird
+                            #the query might be filtering on Key('related_model', id) but we're actually
+                            #looking up on Key('this_model', id). So here we do a kindless comparison
+                            expected = Key.from_path(field.model._meta.db_table, lookup_value.id_or_name())
+                            submatch = expected == entity_value
                         else:
                             submatch = EMULATED_OPS[lookup_type](
                                 entity_value, lookup_value)
