@@ -86,6 +86,7 @@ class KeysTest(TestCase):
         AutoKey.objects.create()
         o1 = AutoKey.objects.create(pk=1)
         o2 = AutoKey.objects.create(pk='1')
+
 #        self.assertEqual(o1, o2) TODO: Not same for Django, same for the database.
         with self.assertRaises(ValueError):
             AutoKey.objects.create(pk='a')
@@ -98,18 +99,23 @@ class KeysTest(TestCase):
             AutoKey.objects.create(id=-1)
         with self.assertRaises(DatabaseError):
             AutoKey.objects.create(id=0)
-        with self.assertRaises(DatabaseError):
+        with self.assertRaises(AutoKey.DoesNotExist):
             AutoKey.objects.get(id=-1)
-        with self.assertRaises(DatabaseError):
+        with self.assertRaises(AutoKey.DoesNotExist):
             AutoKey.objects.get(id__gt=-1)
-        with self.assertRaises(DatabaseError):
+        with self.assertRaises(AutoKey.DoesNotExist):
             AutoKey.objects.get(id=0)
-        with self.assertRaises(DatabaseError):
+        with self.assertRaises(AutoKey.DoesNotExist):
             AutoKey.objects.get(id__gt=0)
+
+        #Invaid values should yield no results, but when negated, still raise an error
         with self.assertRaises(DatabaseError):
-            len(AutoKey.objects.filter(id__gt=-1))
+            list(AutoKey.objects.exclude(id=-1))
+
+        self.assertEqual(0, len(AutoKey.objects.filter(id__gt=-1)))
+        self.assertEqual(0, len(AutoKey.objects.filter(id__gt=0)))
         with self.assertRaises(DatabaseError):
-            len(AutoKey.objects.filter(id__gt=0))
+            self.assertEqual(0, len(AutoKey.objects.exclude(id__gt=0)))
 
     def test_primary_key(self):
         """
@@ -192,12 +198,10 @@ class KeysTest(TestCase):
 
         # TODO: Better fail during validation or creation than
         # sometimes when filtering (False = 0 is a wrong key value).
-        with self.assertRaises(DatabaseError):
-
-            class BooleanKey(models.Model):
-                id = models.BooleanField(primary_key=True)
-            BooleanKey.objects.create(id=True)
-            len(BooleanKey.objects.filter(id=False))
+        class BooleanKey(models.Model):
+            id = models.BooleanField(primary_key=True)
+        BooleanKey.objects.create(id=True)
+        self.assertEqual(0, len(BooleanKey.objects.filter(id=False)))
 
     def test_primary_key_coercing(self):
         """
